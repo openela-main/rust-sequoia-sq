@@ -2,7 +2,7 @@
 ## (rpmautospec version 0.6.5)
 ## RPMAUTOSPEC: autorelease, autochangelog
 %define autorelease(e:s:pb:n) %{?-p:0.}%{lua:
-    release_number = 2;
+    release_number = 1;
     base_release_number = tonumber(rpm.expand("%{?-b*}%{!?-b:1}"));
     print(release_number + base_release_number - 1);
 }%{?-e:.%{-e*}}%{?-s:.%{-s*}}%{!?-n:%{?dist}}
@@ -14,39 +14,33 @@
 %global crate sequoia-sq
 
 %if 0%{?rhel}
-# RHEL: Use bundled deps as it doesn't ship Rust libraries
-%global bundled_rust_deps 1
 %global __brp_mangle_shebangs_exclude_from ^/usr/src/debug/.*$
-%bcond_without bundled_capnproto
-%else
-# Fedora: Use only system Rust libraries
-%global bundled_rust_deps 0
-%bcond_with bundled_capnproto
 %endif
 
+
 Name:           rust-sequoia-sq
-Version:        1.3.0
+Version:        1.3.1.1
 Release:        %autorelease
 Summary:        Command-line frontends for Sequoia
 
 License:        LGPL-2.0-or-later
 URL:            https://crates.io/crates/sequoia-sq
-Source0:        %{crates_source}
+# The version 1.3.1 upstream + patches from justus/pqc branch
+# Generated using:
+#  git archive --format=tar.gz --prefix sequoia-sq-1.3.1.1/ -o sequoia-sq-1.3.1.1.tar.gz justus/pqc
+Source0:        %{crate}-%{version}.tar.gz
 
 # Generated using cargo-vendor-filterer:
-#   cargo download %%{crate}==%%{version} > %%{crate}-%%{version}.crate
-#   tar xf %%{crate}-%%{version}.crate
-#   cargo update ... # optional, if you want to update specific dependencies
-#   pushd %%{crate}-%%{version}
 #   cargo vendor-filterer --platform x86_64-unknown-linux-gnu \
 #                         --platform powerpc64le-unknown-linux-gnu \
 #                         --platform aarch64-unknown-linux-gnu \
 #                         --platform i686-unknown-linux-gnu \
 #                         --platform s390x-unknown-linux-gnu \
 #                         --all-features
-#   tar -cJf ../rust-%%{crate}-%%{version}-vendor.tar.xz vendor
-Source1:        %{name}-%{version}-vendor.tar.xz
+#   tar -czf ../%%{crate}-vendor-%%{version}.tar.gz vendor
+Source1:        %{crate}-vendor-%{version}.tar.gz
 Source2:        capnproto-c++-1.0.1.tar.gz
+Source3:        vendor.toml
 # Manually created patch for downstream crate metadata changes
 # * switch crypto backend from Nettle to OpenSSL
 # * exclude files that are only useful for upstream development
@@ -54,20 +48,19 @@ Source2:        capnproto-c++-1.0.1.tar.gz
 # * drop features for unsupported crypto backends
 Patch:          sequoia-sq-fix-metadata.diff
 
-%if 0%{?bundled_rust_deps}
+%if 0%{?rhel}
 BuildRequires:  rust-toolset
-# vendored openssl-sys
-BuildRequires:  openssl-devel
-# vendored rustqlite
-BuildRequires:  sqlite-devel
 %else
 BuildRequires:  cargo-rpm-macros >= 24
 %endif
 
-%if %{with bundled_capnproto}
+# vendored openssl-sys
+BuildRequires:  openssl-devel
+# vendored rustqlite
+BuildRequires:  sqlite-devel
+
 BuildRequires:  gcc-c++
 BuildRequires:  cmake >= 3.1
-%endif
 
 %global _description %{expand:
 Command-line frontends for Sequoia.}
@@ -119,59 +112,56 @@ License:        %{shrink:
 %files       -n %{crate}
 %license LICENSE.txt
 %license LICENSE.dependencies
+%license cargo-vendor.txt
 %doc README.md
 %{_bindir}/sq
 %{_mandir}/man1/sq*
+%if 0%{?rhel} > 9
 %{bash_completions_dir}/sq.bash
 %{fish_completions_dir}/sq.fish
 %{zsh_completions_dir}/_sq
-
-%prep
-%autosetup -n %{crate}-%{version} -N %{?bundled_rust_deps:-a1}
-%autopatch -M 99 -p1
-%if 0%{?bundled_rust_deps}
-%cargo_prep -v vendor
-
-# drop broken integration tests
-rm -vr subplot/
-rm -v tests/sq-subplot.rs
-# don't lock the dependencies
-rm -f Cargo.lock
-%else
-%cargo_prep
-# drop broken integration tests
-rm -vr subplot/
-rm -v tests/sq-subplot.rs
-
-%generate_buildrequires
-%cargo_generate_buildrequires
 %endif
 
-%if %{with bundled_capnproto}
+%prep
+%autosetup -n %{crate}-%{version} -N -a1
+%autopatch -M 99 -p1
+%cargo_prep -N
+# include full configuration for vendored dependencies
+cat %{SOURCE3} >> .cargo/config.toml
+
+# drop broken integration tests
+rm -vr subplot/
+rm -v tests/sq-subplot.rs
+
 mkdir -p bundled_capnproto
 pushd bundled_capnproto
 tar --strip-components=1 -xf %{SOURCE2}
 popd
-%endif
 
 %build
 export ASSET_OUT_DIR=target/assets
-%if %{with bundled_capnproto}
 pushd bundled_capnproto
 %cmake -DBUILD_TESTING=OFF
 %cmake_build
 export PATH="$PWD/%{__cmake_builddir}/src/capnp:$PATH"
 popd
-%endif
+
 %cargo_build
 %{cargo_license_summary}
 %{cargo_license} > LICENSE.dependencies
+%{cargo_vendor_manifest}
+# replace un-parseable git snapshot dependency information
+sed 's/\(.*\) (.*#\(.*\))/\1+git\2/' -i cargo-vendor.txt
 
 %install
-%cargo_install
+# for some reason, cargo install does not work
+# with vendored dependncies from git branch
+#%%cargo_install
+install -Dpm 0755 target/rpm/sq -t %{buildroot}/%{_bindir}
 # install manual pages
 mkdir -p %{buildroot}/%{_mandir}/man1
 cp -pav target/assets/man-pages/sq*.1 %{buildroot}/%{_mandir}/man1/
+%if 0%{?rhel} > 9
 # install shell completions
 install -Dpm 0644 target/assets/shell-completions/sq.bash \
     %{buildroot}/%{bash_completions_dir}/sq.bash
@@ -179,6 +169,8 @@ install -Dpm 0644 target/assets/shell-completions/sq.fish \
     %{buildroot}/%{fish_completions_dir}/sq.fish
 install -Dpm 0644 target/assets/shell-completions/_sq \
     %{buildroot}/%{zsh_completions_dir}/_sq
+%endif
+
 
 %if %{with check}
 %check
@@ -187,6 +179,9 @@ install -Dpm 0644 target/assets/shell-completions/_sq \
 
 %changelog
 ## START: Generated by rpmautospec
+* Fri Jul 04 2025 Jakub Jelen <jjelen@redhat.com> - 1.3.1.1-1
+- Pull PQC crypto to sq
+
 * Thu Mar 27 2025 Jakub Jelen <jjelen@redhat.com> - 1.3.0-2
 - Make installation of shell completions and man pages more robust
 

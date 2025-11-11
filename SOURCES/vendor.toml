@@ -1,0 +1,21 @@
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/teythoon/rust-openssl?branch=justus/pqc"]
+git = "https://github.com/teythoon/rust-openssl"
+branch = "justus/pqc"
+replace-with = "vendored-sources"
+
+[source."git+https://gitlab.com/sequoia-pgp/sequoia-policy-config?branch=justus/pqc"]
+git = "https://gitlab.com/sequoia-pgp/sequoia-policy-config"
+branch = "justus/pqc"
+replace-with = "vendored-sources"
+
+[source."git+https://gitlab.com/sequoia-pgp/sequoia?branch=justus/pqc"]
+git = "https://gitlab.com/sequoia-pgp/sequoia"
+branch = "justus/pqc"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "vendor"
+
