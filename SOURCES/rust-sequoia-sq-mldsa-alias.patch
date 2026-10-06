@@ -1,0 +1,14 @@
+diff --git a/src/cli/key.rs b/src/cli/key.rs
+index f238bf4..b8896a2 100644
+--- a/src/cli/key.rs
++++ b/src/cli/key.rs
+@@ -105,7 +105,9 @@ pub enum CipherSuite {
+     Rsa4k,
+     #[default]
+     Cv25519,
++    #[value(alias("mldsa65"))]
+     MLDSA65_Ed25519,
++    #[value(alias("mldsa87"))]
+     MLDSA87_Ed448,
+ }
+ 

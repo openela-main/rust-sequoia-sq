@@ -1,3 +1,2 @@
-0f7f4b8a76a2cdb284fddef20de8306450df6dd031a47a15ac95bc43c3358e09 SOURCES/capnproto-c++-1.0.1.tar.gz
-a7308dd26489c6daa310ce0f49f061ff8360f07e49ea1830704cf9e9459bd9cf SOURCES/sequoia-sq-1.3.1.1.tar.gz
-df7310e1dd17a72003071ca2e40f93d9492962a9e303a942efb5aab5dfb254ec SOURCES/sequoia-sq-vendor-1.3.1.1.tar.gz
+a7090e2b9a847cfa5f4fed967f7066e85d85db5cf15f8b12b748b5e99bb5bb47 SOURCES/sequoia-sq-1.4.0.1.tar.gz
+090feaf973b5bbc07124afb448f2b36bffd28f625df4390acb0ee29086e29d63 SOURCES/sequoia-sq-vendor-1.4.0.1.tar.gz
