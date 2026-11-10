@@ -1,16 +1,6 @@
 [source.crates-io]
 replace-with = "vendored-sources"
 
-[source."git+https://gitlab.com/jjelen/sequoia-policy-config?branch=jjelen/pqc-ossl"]
-git = "https://gitlab.com/jjelen/sequoia-policy-config"
-branch = "jjelen/pqc-ossl"
-replace-with = "vendored-sources"
-
-[source."git+https://gitlab.com/jjelen/sequoia?branch=jjelen/pqc-ossl"]
-git = "https://gitlab.com/jjelen/sequoia"
-branch = "jjelen/pqc-ossl"
-replace-with = "vendored-sources"
-
 [source.vendored-sources]
 directory = "vendor"
 
